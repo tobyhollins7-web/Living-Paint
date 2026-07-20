@@ -24,3 +24,6 @@ class Vector2:
         if mag == 0.0:
             return Vector2(0.0, 0.0)
         return Vector2(self.x / mag, self.y / mag)
+
+    def dot(self, other: Vector2) -> float:
+        return self.x * other.x + self.y * other.y

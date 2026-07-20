@@ -4,9 +4,11 @@ from particles import Particle
 from vector2 import Vector2
 from attractors import Attractor
 
-def _update_particle(particle: Particle, dt: float, attractor: Attractor | None, drag_coefficient: float) -> None:
+def _reset_acceleration(particle: Particle) -> None:
     particle.acceleration = Vector2(0.0, 0.0)
 
+def _apply_external_acceleration(particle: Particle, attractor: Attractor | None, drag_coefficient: float) -> None:
+    # Attractor contributions
     if attractor is not None:
         # Get the vector from the particle to the target
         particle_to_target = attractor.position.subtract(particle.position)
@@ -18,20 +20,46 @@ def _update_particle(particle: Particle, dt: float, attractor: Attractor | None,
         # Scale the acceleration to be in the direction of the vector, with magnitude attraction_strength
         attraction_acceleration = unit_direction.scaled_by(attractor.strength_at_distance(distance_to_target))
 
-        # Update particle acceleration
+        # Add the attractor contributions to total acceleration
         particle.acceleration = particle.acceleration.add(attraction_acceleration)
 
     # Drag contributions to acceleration (Linear drag-velocity model)
     drag_acceleration = particle.velocity.scaled_by(-drag_coefficient)  # Contribution of drag in -ve velocity direction
     particle.acceleration = particle.acceleration.add(drag_acceleration)
 
-    # Work out change in velocity as a result in change in acceleration
+
+def _apply_particle_interactions(particles: list[Particle], repulsion_coefficient: float) -> None:
+    for i in range(len(particles)):
+        for j in range(i + 1, len(particles)):
+            particle_a = particles[i]
+            particle_b = particles[j]
+
+            # Get the vector from particle A to B
+            vector_ab = particle_b.position.subtract(particle_a.position)
+            distance_ab = vector_ab.magnitude()
+            particle_overlap = particle_a.species.radius + particle_b.species.radius - distance_ab
+
+            # Case where the particles overlap
+            if particle_overlap > 0.0:
+                # Get the unit vector from A to B
+                unit_vector_ab = vector_ab.normalised()
+
+                # Calculate a simple linear repulsion acceleration magnitude
+                repulsion_magnitude = repulsion_coefficient * particle_overlap
+
+                # Add acceleration component due to particle interaction to both particles
+                particle_a.acceleration = particle_a.acceleration.add(unit_vector_ab.scaled_by(-repulsion_magnitude))
+                particle_b.acceleration = particle_b.acceleration.add(unit_vector_ab.scaled_by(repulsion_magnitude))
+
+
+def _integrate_particle(particle: Particle, dt: float) -> None:
+    # Integrate acceleration to get velocity increment
     velocity_increment = particle.acceleration.scaled_by(dt)
     particle.velocity = particle.velocity.add(velocity_increment)
 
-    # Work out change in displacement as a result in change of velocity
-    displacement = particle.velocity.scaled_by(dt)
-    particle.position = particle.position.add(displacement)
+    # Integrate velocity to get displacement increment
+    displacement_increment = particle.velocity.scaled_by(dt)
+    particle.position = particle.position.add(displacement_increment)
 
 def _handle_boundary_collision(particle: Particle, width: int, height: int) -> None:
     left = particle.position.x - particle.species.radius
@@ -59,9 +87,14 @@ def _handle_boundary_collision(particle: Particle, width: int, height: int) -> N
         particle.velocity.y = -particle.velocity.y
         particle.position.y = height - particle.species.radius
 
-
 def update_particles(particles: list[Particle], dt: float, width: int, height: int,
-                     attractor: Attractor | None, drag_coefficient: float) -> None:
+                     attractor: Attractor | None, drag_coefficient: float, repulsion_coefficient: float) -> None:
     for particle in particles:
-        _update_particle(particle, dt, attractor, drag_coefficient)
+        _reset_acceleration(particle)
+        _apply_external_acceleration(particle, attractor, drag_coefficient)
+
+    _apply_particle_interactions(particles, repulsion_coefficient)
+
+    for particle in particles:
+        _integrate_particle(particle, dt)
         _handle_boundary_collision(particle, width, height)
