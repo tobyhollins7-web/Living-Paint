@@ -27,30 +27,80 @@ def _apply_external_acceleration(particle: Particle, attractor: Attractor | None
     drag_acceleration = particle.velocity.scaled_by(-drag_coefficient)  # Contribution of drag in -ve velocity direction
     particle.acceleration = particle.acceleration.add(drag_acceleration)
 
+def _apply_pair_damping(particle_a: Particle, particle_b: Particle, unit_vector_ab: Vector2,
+                        damping_coefficient: float, damping_weight: float) -> None:
+    # Calculate relative velocity of particles
+    relative_velocity_ab = particle_b.velocity.subtract(particle_a.velocity)
 
-def _apply_particle_interactions(particles: list[Particle], repulsion_coefficient: float) -> None:
-    for i in range(len(particles)):
+    # Calculate the signed relative speed along the line connecting the particles
+    radial_relative_speed = relative_velocity_ab.dot(unit_vector_ab)
+
+    # Equate magnitude of damping from a linear model of speed
+    damping_magnitude = damping_coefficient * damping_weight * radial_relative_speed
+
+    # Work out the increment in acceleration due to damping acting on both particles along AB vector
+    damping_acceleration = unit_vector_ab.scaled_by(damping_magnitude)
+
+    # Add damping acceleration to both particles' accelerations
+    particle_a.acceleration = particle_a.acceleration.add(damping_acceleration)
+    particle_b.acceleration = particle_b.acceleration.add(damping_acceleration.scaled_by(-1.0))
+
+
+def _apply_particle_interactions(particles: list[Particle], repulsion_coefficient: float,
+    species_interaction_radius: float, pair_damping_coefficient: float) -> None:
+    for i in range(len(particles) - 1):
         for j in range(i + 1, len(particles)):
             particle_a = particles[i]
             particle_b = particles[j]
 
-            # Get the vector from particle A to B
             vector_ab = particle_b.position.subtract(particle_a.position)
             distance_ab = vector_ab.magnitude()
-            particle_overlap = particle_a.species.radius + particle_b.species.radius - distance_ab
+            contact_distance_ab = particle_a.species.radius + particle_b.species.radius
 
-            # Case where the particles overlap
+            # This pair cannot affect one another.
+            if distance_ab >= max(contact_distance_ab, species_interaction_radius):
+                continue
+
+            # A coincident pair has no naturally defined direction.
+            if distance_ab == 0.0:
+                unit_vector_ab = Vector2(1.0, 0.0)
+            else:
+                unit_vector_ab = vector_ab.scaled_by(1.0 / distance_ab)
+
+            particle_overlap = contact_distance_ab - distance_ab
+
+            # Universal short-range overlap repulsion.
             if particle_overlap > 0.0:
-                # Get the unit vector from A to B
-                unit_vector_ab = vector_ab.normalised()
-
-                # Calculate a simple linear repulsion acceleration magnitude
                 repulsion_magnitude = repulsion_coefficient * particle_overlap
+                repulsion_ab = unit_vector_ab.scaled_by(repulsion_magnitude)
 
-                # Add acceleration component due to particle interaction to both particles
-                particle_a.acceleration = particle_a.acceleration.add(unit_vector_ab.scaled_by(-repulsion_magnitude))
-                particle_b.acceleration = particle_b.acceleration.add(unit_vector_ab.scaled_by(repulsion_magnitude))
+                particle_a.acceleration = particle_a.acceleration.add(repulsion_ab.scaled_by(-1.0))
+                particle_b.acceleration = particle_b.acceleration.add(repulsion_ab)
 
+                # add damping to the particles to prevent vibration of nearby particles
+                _apply_pair_damping(particle_a, particle_b, unit_vector_ab, pair_damping_coefficient,
+                                    damping_weight=1.0)
+                continue
+
+            # No valid outer interaction region exists.
+            if species_interaction_radius <= contact_distance_ab:
+                continue
+
+            # Zero at contact and outer radius, with maximum strength midway.
+            t = (distance_ab - contact_distance_ab) / (species_interaction_radius - contact_distance_ab)
+            falloff = 4.0 * t * (1.0 - t)
+
+            strength_a_to_b = particle_a.species.interaction_strengths.get(particle_b.species.id, 0.0)
+            strength_b_to_a = particle_b.species.interaction_strengths.get(particle_a.species.id, 0.0)
+
+            acceleration_a = unit_vector_ab.scaled_by(strength_a_to_b * falloff)
+            acceleration_b = unit_vector_ab.scaled_by(-strength_b_to_a * falloff)
+
+            particle_a.acceleration = particle_a.acceleration.add(acceleration_a)
+            particle_b.acceleration = particle_b.acceleration.add(acceleration_b)
+
+            if strength_a_to_b != 0.0 or strength_b_to_a != 0.0:
+                _apply_pair_damping(particle_a, particle_b, unit_vector_ab, pair_damping_coefficient, 1.0 - t)
 
 def _integrate_particle(particle: Particle, dt: float) -> None:
     # Integrate acceleration to get velocity increment
@@ -88,12 +138,13 @@ def _handle_boundary_collision(particle: Particle, width: int, height: int) -> N
         particle.position.y = height - particle.species.radius
 
 def update_particles(particles: list[Particle], dt: float, width: int, height: int,
-                     attractor: Attractor | None, drag_coefficient: float, repulsion_coefficient: float) -> None:
+                     attractor: Attractor | None, drag_coefficient: float, repulsion_coefficient: float,
+                     species_interaction_radius: float, pair_damping_coefficient: float) -> None:
     for particle in particles:
         _reset_acceleration(particle)
         _apply_external_acceleration(particle, attractor, drag_coefficient)
 
-    _apply_particle_interactions(particles, repulsion_coefficient)
+    _apply_particle_interactions(particles, repulsion_coefficient, species_interaction_radius, pair_damping_coefficient)
 
     for particle in particles:
         _integrate_particle(particle, dt)

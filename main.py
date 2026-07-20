@@ -17,7 +17,7 @@ FPS = 120
 INDICATOR_LINEWIDTH = 5
 
 # Particle spawning parameters (Left click)
-PARTICLE_SPAWN_RATE = 10  # Particles/second
+PARTICLE_SPAWN_RATE = 30  # Particles/second
 BRUSH_RADIUS = 40
 
 # Attraction Parameters (Right click)
@@ -25,21 +25,35 @@ ATTRACTION_STRENGTH = 5000
 ATTRACTION_RADIUS = 150
 ATTRACTION_INDICATOR_COLOUR = (130, 120, 255)
 
+# Global species parameters
+SPECIES_INTERACTION_RADIUS = 100.0
+
 # Physics values
 DRAG_COEFFICIENT = 0.5
-REPULSION_COEFFICIENT = 2000.0
+PAIR_DAMPING_COEFFICIENT = 5.0
+REPULSION_COEFFICIENT = 1000.0
 
 # Species definitions
 green_species = Species(
+    id=0,
     name="Green",
     colour=(80, 220, 120),
-    radius=10.0
+    radius=10.0,
+    interaction_strengths={
+        0: 300.0,  # Green clusters with green
+        1: -1000.0,  # Green flees red
+    },
 )
 
 red_species = Species(
+    id=1,
     name="Red",
     colour=(230, 90, 100),
-    radius=7.0
+    radius=7.0,
+    interaction_strengths={
+        0: 800.0,  # Red pursues green
+        1: -100.0,  # Red spreads away from red
+    },
 )
 
 pygame.init()
@@ -106,7 +120,8 @@ while running:
         )
 
     # Advance the simulation
-    update_particles(particles, dt, WIDTH, HEIGHT, attractor, DRAG_COEFFICIENT, REPULSION_COEFFICIENT)
+    update_particles(particles, dt, WIDTH, HEIGHT, attractor, DRAG_COEFFICIENT, REPULSION_COEFFICIENT,
+                     SPECIES_INTERACTION_RADIUS, PAIR_DAMPING_COEFFICIENT)
 
     # Clear the previous frame
     screen.fill(BACKGROUND_COLOR)
