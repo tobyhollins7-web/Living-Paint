@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d4b41ea7-b2ff-4011-9fea-409e640c57d3" name="Changes" comment="V1.1 Implemented Particle Repulsion Logic">
+    <list default="true" id="d4b41ea7-b2ff-4011-9fea-409e640c57d3" name="Changes" comment="V1.2 Implemented Species interactions">
+      <change afterPath="$PROJECT_DIR$/spatial_grid.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renderer.py" beforeDir="false" afterPath="$PROJECT_DIR$/renderer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/simulation.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/species.py" beforeDir="false" afterPath="$PROJECT_DIR$/species.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,6 +61,7 @@
     "Python.brushes.executor": "Run",
     "Python.main.executor": "Run",
     "Python.simulation.executor": "Run",
+    "Python.spatial_grid.executor": "Run",
     "Python.vector2.executor": "Run",
     "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -92,7 +94,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1784559592218</updated>
-      <workItem from="1784559593380" duration="24814000" />
+      <workItem from="1784559593380" duration="28597000" />
     </task>
     <task id="LOCAL-00001" summary="Initial Commit">
       <option name="closed" value="true" />
@@ -118,7 +120,15 @@
       <option name="project" value="LOCAL" />
       <updated>1784586509061</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="V1.2 Implemented Species interactions">
+      <option name="closed" value="true" />
+      <created>1784590320925</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1784590320925</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -138,12 +148,14 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial Commit" />
     <MESSAGE value="V1.1 Implemented Particle Repulsion Logic" />
-    <option name="LAST_COMMIT_MESSAGE" value="V1.1 Implemented Particle Repulsion Logic" />
+    <MESSAGE value="V1.2 Implemented Species interactions" />
+    <option name="LAST_COMMIT_MESSAGE" value="V1.2 Implemented Species interactions" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/Living_Paint$spatial_grid.coverage" NAME="spatial_grid Coverage Results" MODIFIED="1784592354726" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$vector2.coverage" NAME="vector2 Coverage Results" MODIFIED="1784562029324" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$simulation.coverage" NAME="simulation Coverage Results" MODIFIED="1784582039024" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$brushes.coverage" NAME="brushes Coverage Results" MODIFIED="1784582317110" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/Living_Paint$main.coverage" NAME="main Coverage Results" MODIFIED="1784590198339" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Living_Paint$main.coverage" NAME="main Coverage Results" MODIFIED="1784594085849" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

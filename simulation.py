@@ -3,6 +3,7 @@
 from particles import Particle
 from vector2 import Vector2
 from attractors import Attractor
+from spatial_grid import SpatialGrid
 
 def _reset_acceleration(particle: Particle) -> None:
     particle.acceleration = Vector2(0.0, 0.0)
@@ -46,11 +47,15 @@ def _apply_pair_damping(particle_a: Particle, particle_b: Particle, unit_vector_
     particle_b.acceleration = particle_b.acceleration.add(damping_acceleration.scaled_by(-1.0))
 
 
-def _apply_particle_interactions(particles: list[Particle], repulsion_coefficient: float,
+def _apply_particle_interactions(particles: list[Particle], spatial_grid: SpatialGrid, repulsion_coefficient: float,
     species_interaction_radius: float, pair_damping_coefficient: float) -> None:
-    for i in range(len(particles) - 1):
-        for j in range(i + 1, len(particles)):
-            particle_a = particles[i]
+
+    # Spatial grid logic, no need to sample all particles, just particles in nearby grids
+    for i, particle_a in enumerate(particles):
+        nearby_indices = spatial_grid.nearby_particle_indices(particle_a.position)
+        for j in nearby_indices:
+            if j <= 1:
+                continue
             particle_b = particles[j]
 
             vector_ab = particle_b.position.subtract(particle_a.position)
@@ -139,12 +144,16 @@ def _handle_boundary_collision(particle: Particle, width: int, height: int) -> N
 
 def update_particles(particles: list[Particle], dt: float, width: int, height: int,
                      attractor: Attractor | None, drag_coefficient: float, repulsion_coefficient: float,
-                     species_interaction_radius: float, pair_damping_coefficient: float) -> None:
+                     species_interaction_radius: float, pair_damping_coefficient: float,
+                     spatial_grid: SpatialGrid) -> None:
+
     for particle in particles:
         _reset_acceleration(particle)
         _apply_external_acceleration(particle, attractor, drag_coefficient)
 
-    _apply_particle_interactions(particles, repulsion_coefficient, species_interaction_radius, pair_damping_coefficient)
+    spatial_grid.rebuild(particles)
+    _apply_particle_interactions(particles, spatial_grid, repulsion_coefficient, species_interaction_radius,
+                                 pair_damping_coefficient,)
 
     for particle in particles:
         _integrate_particle(particle, dt)
