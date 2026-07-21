@@ -5,6 +5,31 @@ from vector2 import Vector2
 from attractors import Attractor
 from spatial_grid import SpatialGrid
 
+def _apply_feeding(particle_a: Particle, particle_b: Particle, dt: float) -> None:
+    # Check to see if A is a predator of B, if not will be None
+    feeding_rule_a_to_b = particle_a.species.feeding_rules.get(particle_b.species.id, None)
+
+    # Check to see if B is a predator of A, if not will be None
+    feeding_rule_b_to_a = particle_b.species.feeding_rules.get(particle_a.species.id, None)
+
+    energy_taken_by_a, energy_taken_by_b = 0.0, 0.0
+
+    # If A is a predator of B, take either the max amount A can take from B, or B's total energy if this is lesser
+    if feeding_rule_a_to_b is not None:
+        energy_taken_by_a = min(feeding_rule_a_to_b.rate * dt, max(particle_b.energy, 0.0))
+
+    # If B is a predator of A, take either the max amount B can take from A, or A's total energy if this is lesser
+    if feeding_rule_b_to_a is not None:
+        energy_taken_by_b = min(feeding_rule_b_to_a.rate * dt, max(particle_a.energy, 0.0))
+
+    # Work out how much energy is gained by either of the particles
+    energy_gained_by_a = energy_taken_by_a * feeding_rule_a_to_b.efficiency if feeding_rule_a_to_b is not None else 0.0
+    energy_gained_by_b = energy_taken_by_b * feeding_rule_b_to_a.efficiency if feeding_rule_b_to_a is not None else 0.0
+
+    # Add the net gained energy from feeding to particles
+    particle_a.energy += energy_gained_by_a - energy_taken_by_b
+    particle_b.energy += energy_gained_by_b - energy_taken_by_a
+
 def _reset_acceleration(particle: Particle) -> None:
     particle.acceleration = Vector2(0.0, 0.0)
 
@@ -48,7 +73,7 @@ def _apply_pair_damping(particle_a: Particle, particle_b: Particle, unit_vector_
 
 
 def _apply_particle_interactions(particles: list[Particle], spatial_grid: SpatialGrid, repulsion_coefficient: float,
-    species_interaction_radius: float, pair_damping_coefficient: float) -> None:
+    species_interaction_radius: float, pair_damping_coefficient: float, dt: float) -> None:
     # Spatial grid logic, no need to sample all particles, just particles in nearby grids
     for i, particle_a in enumerate(particles):
         nearby_indices = spatial_grid.nearby_particle_indices(particle_a.position)
@@ -84,6 +109,8 @@ def _apply_particle_interactions(particles: list[Particle], spatial_grid: Spatia
                 # add damping to the particles to prevent vibration of nearby particles
                 _apply_pair_damping(particle_a, particle_b, unit_vector_ab, pair_damping_coefficient,
                                     damping_weight=1.0)
+
+                _apply_feeding(particle_a, particle_b, dt)
                 continue
 
             # No valid outer interaction region exists.
@@ -170,7 +197,7 @@ def update_particles(particles: list[Particle], dt: float, width: int, height: i
 
     # Apply particle-particle interactions
     _apply_particle_interactions(particles, spatial_grid, repulsion_coefficient, species_interaction_radius,
-                                 pair_damping_coefficient,)
+                                 pair_damping_coefficient, dt)
 
     for particle in particles:
         # Integrate acceleration twice to get displacement

@@ -6,7 +6,7 @@ from simulation import update_particles
 from renderer import render_particles, render_radius_indicator, render_grid
 from brushes import create_particle
 from attractors import Attractor
-from species import Species
+from species import Species, FeedingRule
 from spatial_grid import SpatialGrid
 
 # General config
@@ -41,12 +41,14 @@ green_species = Species(
     name="Green",
     colour=(80, 220, 120),
     radius=10.0,
+    starting_energy=10.0,
+    metabolism=1.0,
+
     interaction_strengths={
         0: 300.0,
         1: -1000.0,
     },
-    starting_energy=10.0,
-    metabolism=1.0,
+    feeding_rules={},
 )
 
 red_species = Species(
@@ -54,12 +56,19 @@ red_species = Species(
     name="Red",
     colour=(230, 90, 100),
     radius=7.0,
+    starting_energy=30.0,
+    metabolism=3.0,
+
     interaction_strengths={
         0: 800.0,
         1: -100.0,
     },
-    starting_energy=30.0,
-    metabolism=3.0,
+    feeding_rules={
+        0: FeedingRule(
+            rate=2.0,
+            efficiency=0.75,
+        ),
+    },
 )
 
 MAXIMUM_CONTACT_DISTANCE = 2.0 * max(green_species.radius, red_species.radius)
