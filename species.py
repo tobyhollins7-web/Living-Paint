@@ -9,3 +9,5 @@ class Species:
     colour: tuple[int, int, int]
     radius: float
     interaction_strengths: dict[int, float]
+    starting_energy: float
+    metabolism: float

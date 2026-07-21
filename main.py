@@ -33,7 +33,7 @@ SPECIES_INTERACTION_RADIUS = 100.0
 # Physics values
 DRAG_COEFFICIENT = 0.5
 PAIR_DAMPING_COEFFICIENT = 5.0
-REPULSION_COEFFICIENT = 500.0
+REPULSION_COEFFICIENT = 1500.0
 
 # Species definitions
 green_species = Species(
@@ -42,9 +42,11 @@ green_species = Species(
     colour=(80, 220, 120),
     radius=10.0,
     interaction_strengths={
-        0: 100.0,  # Green clusters with green
-        1: -300.0,  # Green flees red
+        0: 300.0,
+        1: -1000.0,
     },
+    starting_energy=10.0,
+    metabolism=1.0,
 )
 
 red_species = Species(
@@ -53,9 +55,11 @@ red_species = Species(
     colour=(230, 90, 100),
     radius=7.0,
     interaction_strengths={
-        0: 40.0,  # Red pursues green
-        1: -10.0,  # Red spreads away from red
+        0: 800.0,
+        1: -100.0,
     },
+    starting_energy=30.0,
+    metabolism=3.0,
 )
 
 MAXIMUM_CONTACT_DISTANCE = 2.0 * max(green_species.radius, red_species.radius)
@@ -135,8 +139,8 @@ while running:
         )
 
     # Advance the simulation
-    update_particles(particles, dt, WIDTH, HEIGHT, attractor, DRAG_COEFFICIENT, REPULSION_COEFFICIENT,
-                     SPECIES_INTERACTION_RADIUS, PAIR_DAMPING_COEFFICIENT, spatial_grid)
+    particles = update_particles(particles, dt, WIDTH, HEIGHT, attractor, DRAG_COEFFICIENT, REPULSION_COEFFICIENT,
+                                  SPECIES_INTERACTION_RADIUS, PAIR_DAMPING_COEFFICIENT, spatial_grid)
 
     # Clear the previous frame
     screen.fill(BACKGROUND_COLOR)
@@ -145,7 +149,7 @@ while running:
         render_grid(screen, spatial_grid, GRID_OVERLAY_COLOUR)
 
     # Render particles
-    render_particles(screen, particles)
+    render_particles(screen, particles, BACKGROUND_COLOR)
 
     # Render active tool indicators
     if left_mouse_held:

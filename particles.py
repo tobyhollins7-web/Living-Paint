@@ -10,3 +10,4 @@ class Particle:
     velocity: Vector2
     acceleration: Vector2
     species: Species
+    energy: float

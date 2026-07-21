@@ -25,4 +25,5 @@ def create_particle(brush_radius: int, species: Species, position: Vector2, widt
         velocity=Vector2(randrange(-500, 500), randrange(-500, 500)),
         acceleration=Vector2(0.0, 0.0),
         species=species,
+        energy=species.starting_energy,
     )
