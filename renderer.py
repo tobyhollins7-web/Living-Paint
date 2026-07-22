@@ -39,3 +39,38 @@ def render_grid(screen: pygame.Surface, grid: SpatialGrid, colour: tuple[int, in
     for row in range(1, grid.number_rows):
         y_position = round(row * grid.cell_size)
         pygame.draw.line(screen, colour, (0, y_position), (grid.domain_width, y_position), line_width)
+
+def render_paint_trails(surface: pygame.Surface, particles: list[Particle],
+                       previous_positions: dict[int, Vector2], background_colour: tuple[int, int, int]) -> None:
+    for particle in particles:
+        previous_position = previous_positions.get(id(particle))
+
+        # This will be the case if the particle has expired
+        if previous_position is None:
+            continue
+
+        # Match particle colour to its energy level
+        particle_colour = _colour_energy_particle(particle, background_colour)
+
+        # Draws a trail
+        pygame.draw.circle(
+            surface,
+            particle_colour,
+            (round(previous_position.x), round(previous_position.y)),
+            particle.species.paint_trail.width,
+        )
+
+        current_position = particle.position
+
+        # This checks to see if the particle is stationary (i.e. has not moved between frames)
+        if previous_position.x == current_position.x and previous_position.y == current_position.y:
+            continue
+
+        # Connects previous position to current position with a line, prevents feathered trail
+        pygame.draw.line(
+            surface,
+            particle_colour,
+            (round(previous_position.x), round(previous_position.y)),
+            (round(current_position.x), round(current_position.y)),
+            width=particle.species.paint_trail.width
+        )

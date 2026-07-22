@@ -15,6 +15,10 @@ class ReproductionRule:
     reproduction_cooldown: float  # How long it takes before reproducing again
 
 @dataclass(frozen=True)
+class PaintTrail:
+    width: int
+
+@dataclass(frozen=True)
 class Species:
     id: int
     name: str
@@ -27,6 +31,8 @@ class Species:
     energy_generation: float  # Amount of energy generated per second
 
     reproduction_rule: ReproductionRule
+
+    paint_trail: PaintTrail
 
     interaction_strengths: dict[int, float]  # int: id of species interacts with, float: the strength of said interaction
     feeding_rules: dict[int, FeedingRule]

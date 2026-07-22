@@ -3,10 +3,10 @@
 import pygame
 from vector2 import Vector2
 from simulation import update_particles
-from renderer import render_particles, render_radius_indicator, render_grid
+from renderer import render_particles, render_radius_indicator, render_grid, render_paint_trails
 from brushes import create_brush_particle
 from attractors import Attractor
-from species import Species, FeedingRule, ReproductionRule
+from species import Species, FeedingRule, ReproductionRule, PaintTrail
 from spatial_grid import SpatialGrid
 
 # General config
@@ -46,7 +46,7 @@ green_species = Species(
     radius=15.0,
 
     starting_energy=10.0,
-    maximum_energy = 20.0,
+    maximum_energy=20.0,
     metabolism=1.0,
 
     energy_generation=1.5,
@@ -56,6 +56,10 @@ green_species = Species(
         reproduction_cost=3.0,
         offspring_energy=2.0,
         reproduction_cooldown=1.0,
+    ),
+
+    paint_trail=PaintTrail(
+        width=8,
     ),
 
     interaction_strengths={
@@ -82,6 +86,10 @@ red_species = Species(
         reproduction_cooldown=5.0,
     ),
 
+    paint_trail=PaintTrail(
+        width=12,
+    ),
+
     energy_generation=0.0,
 
     interaction_strengths={
@@ -103,6 +111,10 @@ spatial_grid = SpatialGrid(domain_width=WIDTH, domain_height=HEIGHT, cell_size=G
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+pigment_surface = pygame.Surface((WIDTH, HEIGHT))
+pigment_surface.fill(BACKGROUND_COLOR)
+
 pygame.display.set_caption("Living Paint")
 
 particles = []
@@ -159,7 +171,7 @@ while running:
         spawn_timer += frame_dt
 
         # If left mouse and spawn timer is applicable, then spawn a particle
-        while spawn_timer >= spawn_interval:
+        while spawn_timer >= spawn_interval and len(particles) < MAXIMUM_PARTICLES:
             new_particle = create_brush_particle(BRUSH_RADIUS, selected_species, cursor_position, WIDTH, HEIGHT)
             particles.append(new_particle)
             spawn_timer -= spawn_interval
@@ -173,6 +185,15 @@ while running:
             strength=ATTRACTION_STRENGTH,
             radius=ATTRACTION_RADIUS,
         )
+
+    # Get previous position before the physics update
+    previous_positions = {
+        id(particle): Vector2(
+            particle.position.x,
+            particle.position.y,
+        )
+        for particle in particles
+    }
 
     # Advance the simulation
     physics_steps = 0
@@ -194,13 +215,14 @@ while running:
         physics_accumulator -= PHYSICS_TIMESTEP
         physics_steps += 1
 
-    # Clear the previous frame
-    screen.fill(BACKGROUND_COLOR)
+    # Render particles
+    render_paint_trails(pigment_surface, particles, previous_positions, BACKGROUND_COLOR)
+    screen.blit(pigment_surface, (0, 0))
 
     if grid_overlay:
         render_grid(screen, spatial_grid, GRID_OVERLAY_COLOUR)
 
-    # Render particles
+
     render_particles(screen, particles, BACKGROUND_COLOR)
 
     # Render active tool indicators
