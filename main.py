@@ -4,7 +4,7 @@ import pygame
 from vector2 import Vector2
 from simulation import update_particles
 from renderer import render_particles, render_radius_indicator, render_grid
-from brushes import create_particle
+from brushes import create_brush_particle
 from attractors import Attractor
 from species import Species, FeedingRule
 from spatial_grid import SpatialGrid
@@ -12,7 +12,7 @@ from spatial_grid import SpatialGrid
 # General config
 WIDTH, HEIGHT = 800, 600
 BACKGROUND_COLOR = (20, 20, 30)
-FPS = 240
+FPS = 120
 GRID_OVERLAY_COLOUR = (55, 55, 75)
 
 # INDICATOR GENERAL SETUP
@@ -24,29 +24,41 @@ BRUSH_RADIUS = 40
 
 # Attraction Parameters (Right click)
 ATTRACTION_STRENGTH = 5000
-ATTRACTION_RADIUS = 100
+ATTRACTION_RADIUS = 50
 ATTRACTION_INDICATOR_COLOUR = (130, 120, 255)
 
 # Global species parameters
 SPECIES_INTERACTION_RADIUS = 100.0
+MAXIMUM_PARTICLES = 1000
 
 # Physics values
 DRAG_COEFFICIENT = 0.5
-PAIR_DAMPING_COEFFICIENT = 5.0
-REPULSION_COEFFICIENT = 1500.0
+PAIR_DAMPING_COEFFICIENT = 3.0
+REPULSION_COEFFICIENT = 1200.0
+PHYSICS_TIMESTEP = 1.0 / 120.0
+MAX_PHYSICS_STEPS = 4
 
 # Species definitions
 green_species = Species(
     id=0,
     name="Green",
     colour=(80, 220, 120),
-    radius=10.0,
+    radius=15.0,
+
     starting_energy=10.0,
+    maximum_energy = 20.0,
     metabolism=1.0,
+
+    energy_generation=1.5,
+
+    reproduction_threshold=11.0,
+    reproduction_cost=3.0,
+    offspring_energy=2.0,
+    reproduction_cooldown=1.0,
 
     interaction_strengths={
         0: 300.0,
-        1: -1000.0,
+        1: -500.0,
     },
     feeding_rules={},
 )
@@ -55,9 +67,18 @@ red_species = Species(
     id=1,
     name="Red",
     colour=(230, 90, 100),
-    radius=7.0,
+    radius=20.0,
+
     starting_energy=30.0,
+    maximum_energy=50.0,
     metabolism=3.0,
+
+    reproduction_threshold=45.0,
+    reproduction_cost=20.0,
+    offspring_energy=15.0,
+    reproduction_cooldown=5.0,
+
+    energy_generation=0.0,
 
     interaction_strengths={
         0: 800.0,
@@ -65,7 +86,7 @@ red_species = Species(
     },
     feeding_rules={
         0: FeedingRule(
-            rate=2.0,
+            rate=10.0,
             efficiency=0.75,
         ),
     },
@@ -90,10 +111,12 @@ running = True
 spawn_timer = 0.0
 selected_species = green_species
 grid_overlay = False
+physics_accumulator = 0.0
 
 while running:
     attractor = None
-    dt = clock.tick(FPS) / 1000.0  # time elapsed per frame in seconds
+    frame_dt = min(clock.tick(FPS) / 1000.0, MAX_PHYSICS_STEPS * PHYSICS_TIMESTEP)  # time elapsed per frame in seconds
+    physics_accumulator += frame_dt
 
     for event in pygame.event.get():
         # In the event of clicking off the display
@@ -129,11 +152,11 @@ while running:
 
     # Case where left mouse button is held down
     if left_mouse_held:
-        spawn_timer += dt
+        spawn_timer += frame_dt
 
         # If left mouse and spawn timer is applicable, then spawn a particle
         while spawn_timer >= spawn_interval:
-            new_particle = create_particle(BRUSH_RADIUS, selected_species, cursor_position, WIDTH, HEIGHT)
+            new_particle = create_brush_particle(BRUSH_RADIUS, selected_species, cursor_position, WIDTH, HEIGHT)
             particles.append(new_particle)
             spawn_timer -= spawn_interval
 
@@ -148,8 +171,24 @@ while running:
         )
 
     # Advance the simulation
-    particles = update_particles(particles, dt, WIDTH, HEIGHT, attractor, DRAG_COEFFICIENT, REPULSION_COEFFICIENT,
-                                  SPECIES_INTERACTION_RADIUS, PAIR_DAMPING_COEFFICIENT, spatial_grid)
+    physics_steps = 0
+
+    while physics_accumulator >= PHYSICS_TIMESTEP and physics_steps < MAX_PHYSICS_STEPS:
+        particles = update_particles(
+            particles=particles,
+            dt=PHYSICS_TIMESTEP,
+            width=WIDTH,
+            height=HEIGHT,
+            attractor=attractor,
+            drag_coefficient=DRAG_COEFFICIENT,
+            repulsion_coefficient=REPULSION_COEFFICIENT,
+            species_interaction_radius=SPECIES_INTERACTION_RADIUS,
+            maximum_particles=MAXIMUM_PARTICLES,
+            pair_damping_coefficient=PAIR_DAMPING_COEFFICIENT,
+            spatial_grid=spatial_grid,
+        )
+        physics_accumulator -= PHYSICS_TIMESTEP
+        physics_steps += 1
 
     # Clear the previous frame
     screen.fill(BACKGROUND_COLOR)
@@ -178,6 +217,21 @@ while running:
             ATTRACTION_INDICATOR_COLOUR,
             INDICATOR_LINEWIDTH,
         )
+
+    green_count = sum(
+        particle.species.id == green_species.id
+        for particle in particles
+    )
+
+    red_count = sum(
+        particle.species.id == red_species.id
+        for particle in particles
+    )
+
+    pygame.display.set_caption(
+        f"Living Paint | Green: {green_count} | "
+        f"Red: {red_count} | Total: {len(particles)}"
+    )
 
     # Display the completed frame
     pygame.display.flip()

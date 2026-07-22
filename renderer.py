@@ -10,7 +10,7 @@ def render_radius_indicator(screen: pygame.Surface, position: Vector2, radius: f
     pygame.draw.circle(screen, colour, position_screen, round(radius), width=line_width)
 
 def _colour_energy_particle(particle: Particle, background_colour: tuple[int, int, int]) -> tuple[int, int, int]:
-    t = max(0.0, min(particle.energy / particle.species.starting_energy, 1.0))
+    t = max(0.0, min(particle.energy / particle.species.maximum_energy, 1.0))
     particle_colour: list[int] = [0, 0, 0]
     # Iterate through the individual primary colours of the particle RGB Tuple (R, G, B)
     for i, colour in enumerate(particle.species.colour):
