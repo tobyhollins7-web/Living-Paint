@@ -8,6 +8,13 @@ class FeedingRule:
     efficiency: float
 
 @dataclass(frozen=True)
+class ReproductionRule:
+    reproduction_threshold: float  # How much energy required before reproduction
+    reproduction_cost: float  # How much energy reproduction costs
+    offspring_energy: float  # How much energy offspring has
+    reproduction_cooldown: float  # How long it takes before reproducing again
+
+@dataclass(frozen=True)
 class Species:
     id: int
     name: str
@@ -19,10 +26,7 @@ class Species:
     metabolism: float  # Amount of energy consumed per second
     energy_generation: float  # Amount of energy generated per second
 
-    reproduction_threshold: float  # How much energy required before reproduction
-    reproduction_cost: float  # How much energy reproduction costs
-    offspring_energy: float  # How much energy offspring has
-    reproduction_cooldown: float  # How long it takes before reproducing again
+    reproduction_rule: ReproductionRule
 
     interaction_strengths: dict[int, float]  # int: id of species interacts with, float: the strength of said interaction
     feeding_rules: dict[int, FeedingRule]

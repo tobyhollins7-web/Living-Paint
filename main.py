@@ -6,7 +6,7 @@ from simulation import update_particles
 from renderer import render_particles, render_radius_indicator, render_grid
 from brushes import create_brush_particle
 from attractors import Attractor
-from species import Species, FeedingRule
+from species import Species, FeedingRule, ReproductionRule
 from spatial_grid import SpatialGrid
 
 # General config
@@ -51,10 +51,12 @@ green_species = Species(
 
     energy_generation=1.5,
 
-    reproduction_threshold=11.0,
-    reproduction_cost=3.0,
-    offspring_energy=2.0,
-    reproduction_cooldown=1.0,
+    reproduction_rule=ReproductionRule(
+        reproduction_threshold=11.0,
+        reproduction_cost=3.0,
+        offspring_energy=2.0,
+        reproduction_cooldown=1.0,
+    ),
 
     interaction_strengths={
         0: 300.0,
@@ -73,10 +75,12 @@ red_species = Species(
     maximum_energy=50.0,
     metabolism=3.0,
 
-    reproduction_threshold=45.0,
-    reproduction_cost=20.0,
-    offspring_energy=15.0,
-    reproduction_cooldown=5.0,
+    reproduction_rule=ReproductionRule(
+        reproduction_threshold=45.0,
+        reproduction_cost=20.0,
+        offspring_energy=15.0,
+        reproduction_cooldown=5.0,
+    ),
 
     energy_generation=0.0,
 

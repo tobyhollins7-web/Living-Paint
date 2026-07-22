@@ -266,6 +266,7 @@ def _find_offspring_position(parent: Particle, particles: list[Particle], pendin
     return None
 
 def _create_offspring(parent: Particle, offspring_position: Vector2) -> Particle:
+    rule = parent.species.reproduction_rule
     return create_particle(
         position=offspring_position,
         species=parent.species,
@@ -273,8 +274,8 @@ def _create_offspring(parent: Particle, offspring_position: Vector2) -> Particle
             parent.velocity.x + uniform(-10.0, 10.0),
             parent.velocity.y + uniform(-10.0, 10.0)
         ),
-        energy=parent.species.offspring_energy,
-        reproduction_cooldown_remaining=parent.species.reproduction_cooldown,
+        energy=rule.offspring_energy,
+        reproduction_cooldown_remaining=rule.reproduction_cooldown,
     )
 
 def _handle_reproduction(particles: list[Particle], dt: float, width: int, height: int, maximum_particles: int,
@@ -300,8 +301,11 @@ def _handle_reproduction(particles: list[Particle], dt: float, width: int, heigh
         if parent.reproduction_cooldown_remaining > 0.0:
             continue
 
+        # Get the reproduction rule
+        reproduction_rule = parent.species.reproduction_rule
+
         # If parent does not have enough energy to reproduce, skip it
-        if parent.energy < parent.species.reproduction_threshold:
+        if parent.energy < reproduction_rule.reproduction_threshold:
             continue
 
         # If passes all eligibility checks then can potentially birth a child
@@ -327,8 +331,8 @@ def _handle_reproduction(particles: list[Particle], dt: float, width: int, heigh
         )
 
         # Apply parenting costs to the parent for creating an offspring
-        parent.energy -= parent.species.reproduction_cost
-        parent.reproduction_cooldown_remaining = parent.species.reproduction_cooldown
+        parent.energy -= reproduction_rule.reproduction_cost
+        parent.reproduction_cooldown_remaining = reproduction_rule.reproduction_cooldown
 
         # Append offspring to the pending offspring
         pending_offspring.append(offspring)
