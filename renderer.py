@@ -45,7 +45,7 @@ def render_paint_trails(surface: pygame.Surface, particles: list[Particle],
     for particle in particles:
         previous_position = previous_positions.get(id(particle))
 
-        # This will be the case if the particle has expired
+        # Particles created during the physics update have no previous position
         if previous_position is None:
             continue
 
@@ -57,7 +57,7 @@ def render_paint_trails(surface: pygame.Surface, particles: list[Particle],
             surface,
             particle_colour,
             (round(previous_position.x), round(previous_position.y)),
-            particle.species.paint_trail.width,
+            particle.species.paint_trail.radius,
         )
 
         current_position = particle.position
@@ -72,5 +72,5 @@ def render_paint_trails(surface: pygame.Surface, particles: list[Particle],
             particle_colour,
             (round(previous_position.x), round(previous_position.y)),
             (round(current_position.x), round(current_position.y)),
-            width=particle.species.paint_trail.width
+            width=round(2.0 * particle.species.paint_trail.radius)
         )

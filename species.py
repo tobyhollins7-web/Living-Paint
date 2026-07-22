@@ -16,7 +16,7 @@ class ReproductionRule:
 
 @dataclass(frozen=True)
 class PaintTrail:
-    width: int
+    radius: int
 
 @dataclass(frozen=True)
 class Species:

@@ -59,7 +59,7 @@ green_species = Species(
     ),
 
     paint_trail=PaintTrail(
-        width=8,
+        radius=8,
     ),
 
     interaction_strengths={
@@ -87,7 +87,7 @@ red_species = Species(
     ),
 
     paint_trail=PaintTrail(
-        width=12,
+        radius=12,
     ),
 
     energy_generation=0.0,
