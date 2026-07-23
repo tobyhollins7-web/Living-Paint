@@ -5,10 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d4b41ea7-b2ff-4011-9fea-409e640c57d3" name="Changes" comment="V1.4 Added Particle reproduction">
+      <change afterPath="$PROJECT_DIR$/density_field.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulation.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/species.py" beforeDir="false" afterPath="$PROJECT_DIR$/species.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/renderer.py" beforeDir="false" afterPath="$PROJECT_DIR$/renderer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,6 +50,9 @@
   &quot;associatedIndex&quot;: 8
 }</component>
   <component name="ProjectId" id="3GlwiceIF8umhAL9tB1PEUQUf53" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="openDirectoriesWithSingleClick" value="true" />
@@ -100,6 +103,8 @@
       <workItem from="1784559593380" duration="28755000" />
       <workItem from="1784628733620" duration="26672000" />
       <workItem from="1784717837502" duration="5765000" />
+      <workItem from="1784755542134" duration="682000" />
+      <workItem from="1784832424689" duration="8207000" />
     </task>
     <task id="LOCAL-00001" summary="Initial Commit">
       <option name="closed" value="true" />
@@ -193,12 +198,13 @@
     <option name="LAST_COMMIT_MESSAGE" value="V1.4 Added Particle reproduction" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Living_Paint$renderer.coverage" NAME="renderer Coverage Results" MODIFIED="1784683422252" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Living_Paint$renderer.coverage" NAME="renderer Coverage Results" MODIFIED="1784734220525" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Living_Paint$two_colour_overlap_test.coverage" NAME="two_colour_overlap_test Coverage Results" MODIFIED="1784736010201" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$spatial_grid.coverage" NAME="spatial_grid Coverage Results" MODIFIED="1784592354726" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$vector2.coverage" NAME="vector2 Coverage Results" MODIFIED="1784562029324" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$simulation.coverage" NAME="simulation Coverage Results" MODIFIED="1784668808957" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$brushes.coverage" NAME="brushes Coverage Results" MODIFIED="1784582317110" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/Living_Paint$main.coverage" NAME="main Coverage Results" MODIFIED="1784724147660" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Living_Paint$main.coverage" NAME="main Coverage Results" MODIFIED="1784846508420" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Living_Paint$.coverage" NAME=" Coverage Results" MODIFIED="1784679366518" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
