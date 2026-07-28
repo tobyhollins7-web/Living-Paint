@@ -17,10 +17,11 @@ FPS = 60
 GRID_OVERLAY_COLOUR = (55, 55, 75)
 
 # Density Field
-DENSITY_CELL_SIZE = 4.0
+DENSITY_CELL_SIZE = 2.0
 DENSITY_INFLUENCE_RADIUS = 25.0
-DENSITY_GAIN = 2.0
+DENSITY_GAIN = 1.0
 DENSITY_GRID_COLOUR = (0, 0, 255)
+DENSITY_FIELD_REFRESH_RATE = 20  # Hz
 
 # INDICATOR GENERAL SETUP
 INDICATOR_LINEWIDTH = 5
@@ -35,14 +36,14 @@ ATTRACTION_RADIUS = 20
 ATTRACTION_INDICATOR_COLOUR = (130, 120, 255)
 
 # Global species parameters
-SPECIES_INTERACTION_RADIUS = 15.0
+SPECIES_INTERACTION_RADIUS = 35.0
 MAXIMUM_PARTICLES = 10000
 
 # Physics values
 DRAG_COEFFICIENT = 2.5
 PAIR_DAMPING_COEFFICIENT = 6.0
-REPULSION_COEFFICIENT = 800.0
-PHYSICS_TIMESTEP = 1.0 / 60.0
+REPULSION_COEFFICIENT = 1200.0
+PHYSICS_TIMESTEP = 1.0 / 120.0
 MAX_PHYSICS_STEPS = 4
 
 # Species definitions
@@ -213,9 +214,13 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Living Paint")
 
+density_surface = pygame.Surface((WIDTH, HEIGHT))
+density_surface.fill(BACKGROUND_COLOR)
+
 particles = []
 
 spawn_interval = 1.0 / PARTICLE_SPAWN_RATE  # Interval of time taken between particle spawns in seconds
+density_refresh_time = 1.0 / DENSITY_FIELD_REFRESH_RATE
 
 clock = pygame.time.Clock()
 running = True
@@ -226,6 +231,7 @@ grid_overlay = False
 render_density_grid = False
 particle_view_mode = False
 physics_accumulator = 0.0
+density_accumulator = density_refresh_time
 
 while running:
     attractor = None
@@ -293,12 +299,17 @@ while running:
     if left_mouse_held:
         spawn_timer += frame_dt
 
+        N_particles = len(particles)
+
         # If left mouse and spawn timer is applicable, then spawn a particle
-        while spawn_timer >= spawn_interval:
+        while spawn_timer >= spawn_interval and N_particles < MAXIMUM_PARTICLES:
+
             new_particle = create_brush_particle(BRUSH_RADIUS, selected_species, cursor_position, WIDTH, HEIGHT)
             particles.append(new_particle)
             spawn_timer -= spawn_interval
 
+        if N_particles >= MAXIMUM_PARTICLES:
+            spawn_timer = 0.0
     else:
         spawn_timer = 0.0
 
@@ -329,19 +340,28 @@ while running:
         physics_accumulator -= PHYSICS_TIMESTEP
         physics_steps += 1
 
-    density_field.rebuild(particles)
-
     # Clear the previous frame
     screen.fill(BACKGROUND_COLOR)
 
     # Render the interpolated density field
     if not particle_view_mode:
-        render_density_field(
-            screen=screen,
-            density_field=density_field,
-            background_colour=BACKGROUND_COLOR,
-            density_gain=DENSITY_GAIN,
-        )
+        density_accumulator += frame_dt
+
+        if density_accumulator >= density_refresh_time:
+            density_field.rebuild(particles)
+
+            density_surface.fill(BACKGROUND_COLOR)
+
+            render_density_field(
+                screen=density_surface,
+                density_field=density_field,
+                background_colour=BACKGROUND_COLOR,
+                density_gain=DENSITY_GAIN,
+            )
+            density_accumulator %= density_refresh_time
+
+        screen.blit(density_surface, (0, 0))
+
     else:
         render_particles(
             screen=screen,

@@ -1,6 +1,6 @@
 # renderer.py
 import pygame
-from math import exp
+import numpy as np
 from particles import Particle
 from vector2 import Vector2
 from spatial_grid import SpatialGrid
@@ -42,61 +42,23 @@ def render_grid(screen: pygame.Surface, grid: SpatialGrid, colour: tuple[int, in
         y_position = round(row * grid.cell_size)
         pygame.draw.line(screen, colour, (0, y_position), (grid.domain_width, y_position), line_width)
 
-def render_density_field(
-    screen: pygame.Surface,
-    density_field: DensityField,
-    background_colour: tuple[int, int, int],
-    density_gain: float,
-) -> None:
-    field_surface = pygame.Surface(
-        (
-            density_field.number_columns,
-            density_field.number_rows,
-        )
-    )
+def render_density_field(screen: pygame.Surface, density_field: DensityField,
+                         background_colour: tuple[int, int, int], density_gain: float) -> None:
+    density = density_field.values
+    coverage = 1.0 - np.exp(-density_gain * density)
+    coverage = np.clip((coverage - 0.15) / (0.65 - 0.15), 0.0, 1.0)
+    coverage = coverage * coverage * (3.0 - 2.0 * coverage)
 
-    for row in range(density_field.number_rows):
-        for column in range(density_field.number_columns):
-            density = density_field.values[row][column]
+    background = np.asarray(background_colour, dtype=np.float64)
+    particle_colours = np.empty_like(density_field.colour_sums)
+    particle_colours[:] = background
+    np.divide(density_field.colour_sums, density[:, :, None], out=particle_colours,
+              where=density[:, :, None] > 0.0)
 
-            coverage = 1.0 - exp(-density_gain * density)
-
-            coverage = max(0.0, min(
-                (coverage - 0.15) / (0.65 - 0.15),
-                1.0,
-            ))
-            coverage = coverage * coverage * (3.0 - 2.0 * coverage)
-
-            if density > 0.0:
-                particle_colour = (
-                    density_field.colour_sums[row][column][0] / density,
-                    density_field.colour_sums[row][column][1] / density,
-                    density_field.colour_sums[row][column][2] / density,
-                )
-            else:
-                particle_colour = background_colour
-
-            colour = (
-                round(
-                    background_colour[0]
-                    + coverage * (particle_colour[0] - background_colour[0])
-                ),
-                round(
-                    background_colour[1]
-                    + coverage * (particle_colour[1] - background_colour[1])
-                ),
-                round(
-                    background_colour[2]
-                    + coverage * (particle_colour[2] - background_colour[2])
-                ),
-            )
-
-            field_surface.set_at((column, row), colour)
-
-    continuous_surface = pygame.transform.smoothscale(
-        field_surface,
-        screen.get_size(),
-    )
+    colours = background + coverage[:, :, None] * (particle_colours - background)
+    colours = np.rint(colours).astype(np.uint8)
+    field_surface = pygame.surfarray.make_surface(np.transpose(colours, (1, 0, 2)))
+    continuous_surface = pygame.transform.smoothscale(field_surface, screen.get_size())
 
     screen.blit(continuous_surface, (0, 0))
 

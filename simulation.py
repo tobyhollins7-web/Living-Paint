@@ -1,40 +1,68 @@
 # simulation.py
 # determines what happens next
-from math import cos, sin, pi
+from math import cos, sin, pi, sqrt
 from random import uniform, shuffle
+
+import numpy as np
+
+from numba_kernels import apply_particle_interactions
 from particles import Particle, create_particle
 from vector2 import Vector2
+from species import FeedingRule
 from attractors import Attractor
 from spatial_grid import SpatialGrid
 
+_species_array_cache: dict[tuple[int, ...], tuple[np.ndarray, ...]] = {}
+
 def _apply_feeding(particle_a: Particle, particle_b: Particle, distance_ab: float, contact_distance_ab: float,
-                   dt: float) -> None:
-    # Check to see if A is a predator of B, if not will be None
-    feeding_rule_a_to_b = particle_a.species.feeding_rules.get(particle_b.species.id, None)
+                   dt: float, feeding_rule_a_to_b: FeedingRule | None, feeding_rule_b_to_a: FeedingRule | None) -> None:
+    energy_taken_by_a = 0.0
+    energy_taken_by_b = 0.0
 
-    # Check to see if B is a predator of A, if not will be None
-    feeding_rule_b_to_a = particle_b.species.feeding_rules.get(particle_a.species.id, None)
+    # A feeds on B
+    if feeding_rule_a_to_b is not None:
+        feeding_reach_a = min(particle_a.species.radius * 0.1, 10.0)
+        if distance_ab <= contact_distance_ab + feeding_reach_a:
+            energy_taken_by_a = min(
+                feeding_rule_a_to_b.rate * dt,
+                max(particle_b.energy, 0.0),
+            )
 
-    feeding_reach_a = min(particle_a.species.radius * 0.1, 10.0)
-    feeding_reach_b = min(particle_b.species.radius * 0.1, 10.0)
+    # B feeds on A
+    if feeding_rule_b_to_a is not None:
+        feeding_reach_b = min(particle_b.species.radius * 0.1, 10.0)
+        if distance_ab <= contact_distance_ab + feeding_reach_b:
+            energy_taken_by_b = min(
+                feeding_rule_b_to_a.rate * dt,
+                max(particle_a.energy, 0.0),
+            )
 
-    energy_taken_by_a, energy_taken_by_b = 0.0, 0.0
+    energy_gained_by_a = (
+        energy_taken_by_a * feeding_rule_a_to_b.efficiency
+        if feeding_rule_a_to_b is not None
+        else 0.0
+    )
 
-    # If A is a predator of B, take either the max amount A can take from B, or B's total energy if this is lesser
-    if feeding_rule_a_to_b is not None and distance_ab <= contact_distance_ab + feeding_reach_a:
-        energy_taken_by_a = min(feeding_rule_a_to_b.rate * dt, max(particle_b.energy, 0.0))
+    energy_gained_by_b = (
+        energy_taken_by_b * feeding_rule_b_to_a.efficiency
+        if feeding_rule_b_to_a is not None
+        else 0.0
+    )
 
-    # If B is a predator of A, take either the max amount B can take from A, or A's total energy if this is lesser
-    if feeding_rule_b_to_a is not None and distance_ab <= contact_distance_ab + feeding_reach_b:
-        energy_taken_by_b = min(feeding_rule_b_to_a.rate * dt, max(particle_a.energy, 0.0))
+    particle_a.energy = min(
+        particle_a.energy
+        + energy_gained_by_a
+        - energy_taken_by_b,
+        particle_a.species.maximum_energy,
+    )
 
-    # Work out how much energy is gained by either of the particles
-    energy_gained_by_a = energy_taken_by_a * feeding_rule_a_to_b.efficiency if feeding_rule_a_to_b is not None else 0.0
-    energy_gained_by_b = energy_taken_by_b * feeding_rule_b_to_a.efficiency if feeding_rule_b_to_a is not None else 0.0
+    particle_b.energy = min(
+        particle_b.energy
+        + energy_gained_by_b
+        - energy_taken_by_a,
+        particle_b.species.maximum_energy,
+    )
 
-    # Add the net gained energy from feeding to particles
-    particle_a.energy = min(particle_a.energy + energy_gained_by_a - energy_taken_by_b, particle_a.species.maximum_energy)
-    particle_b.energy = min(particle_b.energy + energy_gained_by_b - energy_taken_by_a, particle_b.species.maximum_energy)
 
 def _reset_acceleration(particle: Particle) -> None:
     particle.acceleration = Vector2(0.0, 0.0)
@@ -59,95 +87,106 @@ def _apply_external_acceleration(particle: Particle, attractor: Attractor | None
     drag_acceleration = particle.velocity.scaled_by(-drag_coefficient)  # Contribution of drag in -ve velocity direction
     particle.acceleration = particle.acceleration.add(drag_acceleration)
 
-def _apply_pair_damping(particle_a: Particle, particle_b: Particle, unit_vector_ab: Vector2,
+def _apply_pair_damping(particle_a: Particle, particle_b: Particle, unit_x: float, unit_y: float,
                         damping_coefficient: float, damping_weight: float) -> None:
     # Calculate relative velocity of particles
-    relative_velocity_ab = particle_b.velocity.subtract(particle_a.velocity)
+    relative_velocity_x = particle_b.velocity.x - particle_a.velocity.x
+    relative_velocity_y = particle_b.velocity.y - particle_a.velocity.y
 
     # Calculate the signed relative speed along the line connecting the particles
-    radial_relative_speed = relative_velocity_ab.dot(unit_vector_ab)
+    radial_relative_speed = relative_velocity_x * unit_x + relative_velocity_y * unit_y
 
     # Equate magnitude of damping from a linear model of speed
     damping_magnitude = damping_coefficient * damping_weight * radial_relative_speed
 
     # Work out the increment in acceleration due to damping acting on both particles along AB vector
-    damping_acceleration = unit_vector_ab.scaled_by(damping_magnitude)
+    damping_x = unit_x * damping_magnitude
+    damping_y = unit_y * damping_magnitude
 
     # Add damping acceleration to both particles' accelerations
-    particle_a.acceleration = particle_a.acceleration.add(damping_acceleration)
-    particle_b.acceleration = particle_b.acceleration.add(damping_acceleration.scaled_by(-1.0))
+    particle_a.acceleration.x += damping_x
+    particle_a.acceleration.y += damping_y
+
+    particle_b.acceleration.x -= damping_x
+    particle_b.acceleration.y -= damping_y
+
+
+def _get_species_arrays(particles: list[Particle]) -> tuple[np.ndarray, ...]:
+    species_by_id = {particle.species.id: particle.species for particle in particles}
+    cache_key = tuple(id(species_by_id[species_id]) for species_id in sorted(species_by_id))
+    cached_arrays = _species_array_cache.get(cache_key)
+
+    if cached_arrays is not None:
+        return cached_arrays
+
+    maximum_species_id = max(
+        max([current_species.id, *current_species.interaction_strengths, *current_species.feeding_rules])
+        for current_species in species_by_id.values()
+    )
+    number_species = maximum_species_id + 1
+    radii = np.zeros(number_species, dtype=np.float64)
+    maximum_energies = np.zeros(number_species, dtype=np.float64)
+    interaction_strengths = np.zeros((number_species, number_species), dtype=np.float64)
+    feeding_rates = np.zeros((number_species, number_species), dtype=np.float64)
+    feeding_efficiencies = np.zeros((number_species, number_species), dtype=np.float64)
+
+    for current_species in species_by_id.values():
+        species_id = current_species.id
+        radii[species_id] = current_species.radius
+        maximum_energies[species_id] = current_species.maximum_energy
+
+        for other_species_id, strength in current_species.interaction_strengths.items():
+            interaction_strengths[species_id, other_species_id] = strength
+
+        for other_species_id, feeding_rule in current_species.feeding_rules.items():
+            feeding_rates[species_id, other_species_id] = feeding_rule.rate
+            feeding_efficiencies[species_id, other_species_id] = feeding_rule.efficiency
+
+    species_arrays = radii, maximum_energies, interaction_strengths, feeding_rates, feeding_efficiencies
+    _species_array_cache[cache_key] = species_arrays
+    return species_arrays
 
 
 def _apply_particle_interactions(particles: list[Particle], spatial_grid: SpatialGrid, repulsion_coefficient: float,
-    species_interaction_radius: float, pair_damping_coefficient: float, dt: float) -> None:
-    # Spatial grid logic, no need to sample all particles, just particles in nearby grids
-    for i, particle_a in enumerate(particles):
-        nearby_indices = spatial_grid.nearby_particle_indices(particle_a.position)
-        for j in nearby_indices:
-            if j <= i:
-                continue
-            particle_b = particles[j]
+                                 species_interaction_radius: float, pair_damping_coefficient: float,
+                                 dt: float) -> None:
+    if not particles:
+        return
 
-            vector_ab = particle_b.position.subtract(particle_a.position)
-            distance_ab = vector_ab.magnitude()
-            contact_distance_ab = particle_a.species.radius + particle_b.species.radius
+    number_particles = len(particles)
+    positions = np.empty((number_particles, 2), dtype=np.float64)
+    velocities = np.empty((number_particles, 2), dtype=np.float64)
+    accelerations = np.empty((number_particles, 2), dtype=np.float64)
+    energies = np.empty(number_particles, dtype=np.float64)
+    species_ids = np.empty(number_particles, dtype=np.int32)
 
-            # This pair cannot affect one another.
-            if distance_ab >= max(contact_distance_ab, species_interaction_radius):
-                continue
+    for particle_index, particle in enumerate(particles):
+        positions[particle_index] = particle.position.x, particle.position.y
+        velocities[particle_index] = particle.velocity.x, particle.velocity.y
+        accelerations[particle_index] = particle.acceleration.x, particle.acceleration.y
+        energies[particle_index] = particle.energy
+        species_ids[particle_index] = particle.species.id
 
-            _apply_feeding(particle_a, particle_b, distance_ab, contact_distance_ab, dt)
+    radii, maximum_energies, interaction_strengths, feeding_rates, feeding_efficiencies = _get_species_arrays(particles)
+    apply_particle_interactions(positions, velocities, accelerations, energies, species_ids, radii, maximum_energies,
+                                interaction_strengths, feeding_rates, feeding_efficiencies, spatial_grid.cell_size,
+                                spatial_grid.number_columns, spatial_grid.number_rows, repulsion_coefficient,
+                                species_interaction_radius, pair_damping_coefficient, dt)
 
-            # A coincident pair has no naturally defined direction.
-            if distance_ab == 0.0:
-                unit_vector_ab = Vector2(1.0, 0.0)
-            else:
-                unit_vector_ab = vector_ab.scaled_by(1.0 / distance_ab)
-
-            particle_overlap = contact_distance_ab - distance_ab
-
-            # Universal short-range overlap repulsion.
-            if particle_overlap > 0.0:
-                repulsion_magnitude = repulsion_coefficient * particle_overlap
-                repulsion_ab = unit_vector_ab.scaled_by(repulsion_magnitude)
-
-                particle_a.acceleration = particle_a.acceleration.add(repulsion_ab.scaled_by(-1.0))
-                particle_b.acceleration = particle_b.acceleration.add(repulsion_ab)
-
-                # add damping to the particles to prevent vibration of nearby particles
-                _apply_pair_damping(particle_a, particle_b, unit_vector_ab, pair_damping_coefficient,
-                                    damping_weight=1.0)
-
-                continue
-
-            # No valid outer interaction region exists.
-            if species_interaction_radius <= contact_distance_ab:
-                continue
-
-            # Zero at contact and outer radius, with maximum strength midway.
-            t = (distance_ab - contact_distance_ab) / (species_interaction_radius - contact_distance_ab)
-            falloff = 4.0 * t * (1.0 - t)
-
-            strength_a_to_b = particle_a.species.interaction_strengths.get(particle_b.species.id, 0.0)
-            strength_b_to_a = particle_b.species.interaction_strengths.get(particle_a.species.id, 0.0)
-
-            acceleration_a = unit_vector_ab.scaled_by(strength_a_to_b * falloff)
-            acceleration_b = unit_vector_ab.scaled_by(-strength_b_to_a * falloff)
-
-            particle_a.acceleration = particle_a.acceleration.add(acceleration_a)
-            particle_b.acceleration = particle_b.acceleration.add(acceleration_b)
-
-            if strength_a_to_b != 0.0 or strength_b_to_a != 0.0:
-                _apply_pair_damping(particle_a, particle_b, unit_vector_ab, pair_damping_coefficient, 1.0 - t)
+    for particle_index, particle in enumerate(particles):
+        particle.acceleration.x = accelerations[particle_index, 0]
+        particle.acceleration.y = accelerations[particle_index, 1]
+        particle.energy = energies[particle_index]
 
 def _integrate_particle(particle: Particle, dt: float) -> None:
     # Integrate acceleration to get velocity increment
-    velocity_increment = particle.acceleration.scaled_by(dt)
-    particle.velocity = particle.velocity.add(velocity_increment)
+    particle.velocity.x += particle.acceleration.x * dt
+    particle.velocity.y += particle.acceleration.y * dt
 
     # Integrate velocity to get displacement increment
-    displacement_increment = particle.velocity.scaled_by(dt)
-    particle.position = particle.position.add(displacement_increment)
+    particle.position.x += particle.velocity.x * dt
+    particle.position.y += particle.velocity.y * dt
+
 
 def _handle_boundary_collision(particle: Particle, width: int, height: int) -> None:
     left = particle.position.x - particle.species.radius
@@ -338,7 +377,9 @@ def _handle_reproduction(particles: list[Particle], dt: float, width: int, heigh
         pending_offspring.append(offspring)
 
     # Extend the particles to now include all the offspring this timestep
+    first_offspring_index = len(particles)
     particles.extend(pending_offspring)
+    spatial_grid.append_particles(first_particle_index=first_offspring_index, new_particles=pending_offspring)
     return particles
 
 
@@ -355,9 +396,6 @@ def update_particles(particles: list[Particle], dt: float, width: int, height: i
     # Apply metabolism and energy generation updates
     for particle in particles:
         _update_particle_energy(particle, dt)
-
-    # Bin the particles into the spatial grid
-    spatial_grid.rebuild(particles)
 
     # Apply particle-particle interactions
     _apply_particle_interactions(particles, spatial_grid, repulsion_coefficient, species_interaction_radius,
